@@ -2,15 +2,10 @@
   "version": 2,
   "builds": [
     { "src": "index.html", "use": "@vercel/static" },
-    { "src": "api/suche.js", "use": "@vercel/node" }
+    { "src": "api/suche.js", "use": "@vercel/node", "config": { "maxDuration": 60 } }
   ],
   "routes": [
     { "src": "/api/suche", "dest": "/api/suche.js" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "functions": {
-    "api/suche.js": {
-      "maxDuration": 60
-    }
-  }
+  ]
 }
