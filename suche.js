@@ -16,7 +16,6 @@ export default async function handler(req, res) {
       headers: {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'tools-2024-04-04',
         'content-type': 'application/json',
       },
       body: JSON.stringify({
