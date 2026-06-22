@@ -424,7 +424,6 @@ async function startOnlineSearch(){
             <span class="outfit-item-name">${item.name}</span>
             <span class="shop-tag">${item.shop}</span>
             <span class="shop-tag">${item.preis}</span>
-            ${item.url?.startsWith('http')?`<a class="outfit-link" href="${item.url}" target="_blank" rel="noopener">→ Shop</a>`:''}
           </div>`).join('');
         html+=`<div class="person-outfit-block">
           <div class="person-outfit-title">${s.icon||''} ${s.person}</div>
