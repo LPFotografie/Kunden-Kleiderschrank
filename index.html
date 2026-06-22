@@ -297,22 +297,34 @@ async function fetchOnlineSuggestions(persons,palette,stil){
   const paletteName=PALETTES.find(p=>p.id===palette)?.label||palette;
   const stilName=STILE.find(s=>s.id===stil)?.label||'Elegant';
   const personList=persons.map(p=>`${p.label}${p.schwanger?' (schwanger)':''}: Größe ${p.sizeValue||'unbekannt'}`).join(', ');
-  const prompt=`Du bist Styling-Assistent für ein Fotoshooting. Empfehle für jede Person ein konkretes Outfit aus DACH-Online-Shops (Zalando, About You, H&M, Zara, C&A, Orsay, Bonprix, Mango).\n\nPersonen: ${personList}\nFarbpalette: ${paletteName}\nStil: ${stilName}\n\nFür JEDE Person: 1-2 konkrete Outfit-Teile mit Shop-Name und Preis. Baby: weicher Body/Strampler. Papa: koordiniertes Outfit.\n\nNUR JSON ohne Markdown:\n[{"person":"...","icon":"...","outfit":"...","items":[{"name":"...","shop":"...","preis":"ca. XX €","url":"https://..."}],"tipp":"..."}]`;
-  const res=await fetch("/api/suche",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:"Du bist ein hilfreicher Styling-Assistent.",messages:[{role:"user",content:prompt}]})});
+  const prompt=`Du bist Styling-Assistent für ein Fotoshooting im DACH-Raum. Empfehle für jede Person ein konkretes Outfit.
+
+Personen: ${personList}
+Farbpalette: ${paletteName}
+Stil: ${stilName}
+
+Antworte NUR mit einem JSON-Array, ohne Markdown, ohne Erklärung:
+[{"person":"Name","icon":"👗","outfit":"Kurze Beschreibung","items":[{"name":"Produktname","shop":"Zalando","preis":"ca. 49 €","url":"https://www.zalando.de"}],"tipp":"Styling-Tipp"}]`;
+  const res=await fetch("/api/suche",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:"Du bist ein Styling-Assistent. Antworte immer nur mit reinem JSON, ohne Markdown-Codeblöcke, ohne Erklärungen.",messages:[{role:"user",content:prompt}]})});
   const data=await res.json();
   const text=data.content.map(i=>i.text||'').join('');
-  try{return JSON.parse(text.replace(/```json|```/g,'').trim())}catch{return null}
+  const clean=text.replace(/```json|```/g,'').trim();
+  const match=clean.match(/\[[\s\S]*\]/);
+  try{return match?JSON.parse(match[0]):null}catch(e){console.log('suggestions parse error:',e,'raw:',text);return null}
 }
 
 async function fetchStylingTips(persons,palette,stil){
   const paletteName=PALETTES.find(p=>p.id===palette)?.label||palette;
   const stilName=STILE.find(s=>s.id===stil)?.label||'Elegant';
   const pl=persons.map(p=>p.label+(p.schwanger?' (schwanger)':'')).join(', ');
-  const prompt=`5 kurze Styling-Tipps für Foto-Shooting mit: ${pl}. Farbpalette: ${paletteName}, Stil: ${stilName}. NUR JSON-Array: ["Tipp 1","Tipp 2",...]`;
-  const res=await fetch("/api/suche",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:"Du bist ein hilfreicher Styling-Assistent.",messages:[{role:"user",content:prompt}]})});
+  const prompt=`Gib 5 kurze Styling-Tipps für ein Foto-Shooting mit: ${pl}. Farbpalette: ${paletteName}, Stil: ${stilName}.
+Antworte NUR mit einem JSON-Array: ["Tipp 1","Tipp 2","Tipp 3","Tipp 4","Tipp 5"]`;
+  const res=await fetch("/api/suche",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system:"Du bist ein Styling-Assistent. Antworte immer nur mit reinem JSON, ohne Markdown-Codeblöcke.",messages:[{role:"user",content:prompt}]})});
   const data=await res.json();
   const text=data.content.map(i=>i.text||'').join('');
-  try{return JSON.parse(text.replace(/```json|```/g,'').trim())}catch{return null}
+  const clean=text.replace(/```json|```/g,'').trim();
+  const match=clean.match(/\[[\s\S]*\]/);
+  try{return match?JSON.parse(match[0]):null}catch{return null}
 }
 
 async function findOutfits(){
@@ -385,6 +397,8 @@ async function startOnlineSearch(){
       fetchStylingTips(persons,selectedPalette,selectedStil)
     ]);
     let html='<h2 class="result-section-title" style="margin-top:1.8rem">Online-Outfits</h2>';
+    console.log('suggestions result:',suggestions);
+    console.log('tips result:',tips);
     if(suggestions?.length){
       suggestions.forEach(s=>{
         const itemsHtml=(s.items||[]).map(item=>`
@@ -412,7 +426,10 @@ async function startOnlineSearch(){
       <button class="action-btn action-btn-secondary" onclick="window.print()">Als PDF speichern</button>
     </div>`;
     sec.innerHTML=html;
-  }catch(err){sec.innerHTML='<div class="empty-note">Fehler – bitte erneut versuchen.</div>'}
+  }catch(err){
+    sec.innerHTML='<div class="empty-note">Fehler: '+err.message+'</div>';
+    console.error('startOnlineSearch error:',err);
+  }
 }
 
 
