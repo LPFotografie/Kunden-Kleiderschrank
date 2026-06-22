@@ -49,6 +49,12 @@ body{font-family:'Jost',sans-serif;background:var(--beige-light);color:var(--tex
 .wardrobe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1rem;margin-bottom:2rem}
 .wardrobe-card{background:var(--white);border:1px solid var(--border);overflow:hidden;animation:fadeIn 0.3s ease;transition:box-shadow 0.18s,transform 0.18s}
 .wardrobe-card:hover{box-shadow:0 6px 22px rgba(0,0,0,0.1);transform:translateY(-2px)}
+.wardrobe-card.selected{box-shadow:0 0 0 3px var(--brown);transform:translateY(-2px)}
+.wardrobe-card.selected .wardrobe-card-info::after{content:'✓ Gemerkt';display:block;font-size:0.7rem;color:var(--brown);font-weight:500;margin-top:0.3rem;letter-spacing:0.05em}
+#merkliste-section{margin-top:1.5rem;padding:1.25rem;background:var(--beige);border:1px solid var(--border)}
+.merkliste-title{font-family:var(--font-serif);font-weight:300;font-size:1rem;color:var(--brown);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:0.75rem}
+.merkliste-items{display:flex;flex-wrap:wrap;gap:0.5rem}
+.merkliste-tag{font-size:0.75rem;background:var(--white);border:1px solid var(--border);padding:0.25rem 0.65rem;color:var(--text)}
 .wardrobe-card-gallery{position:relative;overflow:hidden;aspect-ratio:3/4;background:var(--beige-light)}
 .wardrobe-card-gallery img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center top;opacity:0;transition:opacity 0.35s ease;display:block}
 .wardrobe-card-gallery img.active{opacity:1}
@@ -345,6 +351,42 @@ Antworte NUR mit einem JSON-Array: ["Tipp 1","Tipp 2","Tipp 3","Tipp 4","Tipp 5"
   try{return match?JSON.parse(match[0]):null}catch{return null}
 }
 
+const selectedItems = new Set();
+
+function toggleSelect(card, itemId) {
+  if (selectedItems.has(itemId)) {
+    selectedItems.delete(itemId);
+    card.classList.remove('selected');
+  } else {
+    selectedItems.add(itemId);
+    card.classList.add('selected');
+  }
+  updateMerkliste();
+}
+
+function updateMerkliste() {
+  const sec = document.getElementById('merkliste-section');
+  if (!sec) return;
+  if (selectedItems.size === 0) {
+    sec.style.display = 'none';
+    return;
+  }
+  sec.style.display = 'block';
+  const items = WARDROBE.filter(i => selectedItems.has(i.id));
+  sec.innerHTML = `<div class="merkliste-title">✦ Deine Merkliste (${items.length})</div>
+    <div class="merkliste-items">${items.map(i => `<span class="merkliste-tag">${i.label} · Gr. ${i.sizes}</span>`).join('')}</div>
+    <button onclick="copyMerkliste()" style="margin-top:0.75rem;padding:0.45rem 1rem;background:transparent;border:1px solid var(--brown);color:var(--brown);font-family:inherit;font-size:0.78rem;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;">Liste kopieren</button>`;
+}
+
+function copyMerkliste() {
+  const items = WARDROBE.filter(i => selectedItems.has(i.id));
+  const text = 'Meine Wunsch-Outfits aus dem LP Fotografie Kleiderschrank:
+
+' + items.map(i => `• ${i.label} (Gr. ${i.sizes})`).join('
+');
+  navigator.clipboard.writeText(text).then(() => alert('Liste kopiert!')).catch(() => prompt('Manuell kopieren:', text));
+}
+
 async function findOutfits(){
   if(!selectedPalette){alert('Bitte wähle eine Farbpalette.');return}
   if(!persons.length){alert('Bitte füge mindestens eine Person hinzu.');return}
@@ -358,6 +400,7 @@ async function findOutfits(){
       <h2 class="result-section-title">Kundenkleiderschrank</h2>
       <p style="font-size:0.8rem;color:var(--text-light);margin-bottom:1.2rem;letter-spacing:0.04em">${matches.length} passende Teile – kostenlos im Studio verfügbar.</p>
       <div class="wardrobe-grid" id="w-grid"></div>
+      <div id="merkliste-section" style="display:none"></div>
       <div class="divider"></div>
       <div class="weiter-wrap"><button class="weiter-btn" id="weiter-btn" onclick="startOnlineSearch()">Weiter zur Internetsuche →</button></div>
       <div id="online-section"></div>`;
@@ -393,8 +436,13 @@ async function findOutfits(){
           <span class="match-badge">${item.category}</span>
         </div>`;
       grid.appendChild(card);
-    });
-  } else {
+      card.style.cursor='pointer';
+      card.addEventListener('click',(e)=>{
+        if(!e.target.classList.contains('gallery-arrow')&&!e.target.classList.contains('gallery-dot')){
+          toggleSelect(card,item.id);
+        }
+      });
+    });  } else {
     results.innerHTML='<div id="online-section"></div>';
     await startOnlineSearch();
   }
