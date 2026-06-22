@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<body>
+<button onclick="test()">API testen</button>
+<pre id="out">Noch kein Ergebnis</pre>
+<script>
+async function test(){
+  document.getElementById('out').textContent = 'Läuft...';
+  try{
+    const res = await fetch('/api/suche', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        system: 'Antworte nur mit: OK',
+        messages: [{role:'user', content:'Test'}]
+      })
+    });
+    const text = await res.text();
+    document.getElementById('out').textContent = 'Status: ' + res.status + '\n' + text;
+  }catch(err){
+    document.getElementById('out').textContent = 'Fehler: ' + err.message;
+  }
+}
+</script>
+</body>
+</html>
