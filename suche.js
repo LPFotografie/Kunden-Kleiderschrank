@@ -20,14 +20,15 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        max_tokens: 2048,
         system: body.system,
         messages: body.messages,
       }),
     });
 
     const data = await response.json();
+    console.log('Anthropic response status:', response.status);
+    console.log('Anthropic response:', JSON.stringify(data).substring(0, 500));
 
     if (!response.ok) {
       return res.status(response.status).json(data);
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(data);
   } catch (err) {
+    console.error('Error:', err.message);
     return res.status(500).json({ error: err.message });
   }
 }
