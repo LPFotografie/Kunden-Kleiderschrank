@@ -49,6 +49,11 @@ body{font-family:'Jost',sans-serif;background:var(--beige-light);color:var(--tex
 .wardrobe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:1rem;margin-bottom:2rem}
 .wardrobe-card{background:var(--white);border:1px solid var(--border);overflow:hidden;animation:fadeIn 0.3s ease;transition:box-shadow 0.18s,transform 0.18s}
 .wardrobe-card:hover{box-shadow:0 6px 22px rgba(0,0,0,0.1);transform:translateY(-2px)}
+.wardrobe-card.selected{box-shadow:0 0 0 3px var(--brown) !important}
+.selected-badge{position:absolute;top:7px;right:7px;background:var(--brown);color:#fff;width:20px;height:20px;border-radius:50%;font-size:11px;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:10}
+.wardrobe-card.selected .selected-badge{display:flex}
+#merkliste-box{margin:1rem 0 0;padding:1rem;background:var(--beige);border:1px solid var(--border);display:none}
+.merkliste-tag{display:inline-block;font-size:.74rem;background:#fff;border:1px solid var(--border);padding:.2rem .55rem;margin:.2rem;color:var(--text)}
 .wardrobe-card-gallery{position:relative;overflow:hidden;aspect-ratio:3/4;background:var(--beige-light)}
 .wardrobe-card-gallery img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center top;opacity:0;transition:opacity 0.35s ease;display:block}
 .wardrobe-card-gallery img.active{opacity:1}
@@ -323,6 +328,27 @@ async function fetchStylingTips(persons,palette,stil){
   try{return m?JSON.parse(m[0]):null}catch(e){return null}
 }
 
+
+const _sel=new Set();
+function _toggle(card,id){
+  if(_sel.has(id)){_sel.delete(id);card.classList.remove('selected');}
+  else{_sel.add(id);card.classList.add('selected');}
+  _updateBox();
+}
+function _updateBox(){
+  const b=document.getElementById('merkliste-box');
+  if(!b)return;
+  if(!_sel.size){b.style.display='none';return;}
+  b.style.display='block';
+  const items=WARDROBE.filter(x=>_sel.has(x.id));
+  b.innerHTML='<div style="font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;color:var(--brown);margin-bottom:.5rem">✦ Gemerkt ('+items.length+')</div>'
+    +'<div>'+items.map(x=>'<span class="merkliste-tag">'+x.label+' · Gr. '+x.sizes+'</span>').join('')+'</div>'
+    +'<button onclick="_copy()" style="margin-top:.6rem;padding:.35rem .9rem;background:transparent;border:1px solid var(--brown);color:var(--brown);font-family:inherit;font-size:.76rem;letter-spacing:.05em;cursor:pointer">Liste kopieren</button>';
+}
+function _copy(){
+  const t=WARDROBE.filter(x=>_sel.has(x.id)).map(x=>'• '+x.label+' (Gr. '+x.sizes+')').join('\n');
+  navigator.clipboard.writeText('Meine Wunsch-Outfits:\n\n'+t).then(()=>alert('Kopiert!')).catch(()=>prompt('',t));
+}
 async function findOutfits(){
   if(!selectedPalette){alert('Bitte wähle eine Farbpalette.');return}
   if(!persons.length){alert('Bitte füge mindestens eine Person hinzu.');return}
@@ -370,8 +396,24 @@ async function findOutfits(){
           <div class="wardrobe-card-meta">Größe: ${item.sizes}</div>
           <span class="match-badge">${item.category}</span>
         </div>`;
+      // add badge element
+      const badge=document.createElement('div');
+      badge.className='selected-badge';
+      badge.textContent='✓';
+      card.querySelector('.wardrobe-card-gallery').appendChild(badge);
+      card.style.cursor='pointer';
+      card.style.position='relative';
+      card.addEventListener('click',(e)=>{
+        if(!e.target.classList.contains('gallery-arrow')&&!e.target.classList.contains('gallery-dot')){
+          _toggle(card,item.id);
+        }
+      });
       grid.appendChild(card);
     });
+    // add merkliste box
+    const mbox=document.createElement('div');
+    mbox.id='merkliste-box';
+    grid.after(mbox);
   } else {
     results.innerHTML='<div id="online-section"></div>';
     await startOnlineSearch();
